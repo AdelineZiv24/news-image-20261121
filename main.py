@@ -1,48 +1,37 @@
-#!/usr/bin/env python3
-"""The World in One Page — Saturday Edition (21 November 2026).
+# "The World in One Page — Saturday Edition" — a one-image summary of
+# Saturday 21 November 2026's world news, built for make.fun's
+# news-image-20261121 competition.
+#
+# The picture itself lives in this repository as entry.png (a newspaper front
+# page drawn with frontpage.html and rendered by tools/render.py). This
+# program's whole job is to deliver those exact bytes to the grader: it copies
+# entry.png, from beside this file, to entry.png inside the output directory.
+# It runs offline, with the standard library only, and writes the same bytes
+# on every run, so two runs always produce identical output.
+#
+# Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
+#   mkdir -p out && MAKEFUN_OUTPUT_DIR=out python3 main.py
 
-Small entry script: verifies the entry files are present, prints the
-entry summary, and can serve the front page locally for inspection.
-
-Usage:
-    python3 main.py            # check files + print summary
-    python3 main.py --serve    # serve this directory on http://127.0.0.1:8132
-"""
-import argparse
-import http.server
-import socketserver
+import os
+import shutil
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-FILES = ["frontpage.html", "entry.png", "README.md", "SOURCES.md",
-         "LICENSE", ".makefun/owner.json", "tools/render.py", "main.py"]
+HERE = Path(__file__).resolve().parent
+SOURCE = HERE / "entry.png"
 
 
-def check():
-    missing = [f for f in FILES if not (ROOT / f).exists()]
-    size = (ROOT / "entry.png").stat().st_size if (ROOT / "entry.png").exists() else 0
-    print("The World in One Page — Saturday Edition")
-    print("Competition: news-image-20261121 (make.fun)")
-    print("Date covered: Saturday 21 November 2026")
-    print(f"Stories: 50 (16 drawn, 34 briefs) across 7 regions")
-    if missing:
-        print("MISSING:", ", ".join(missing))
-        return 1
-    print(f"All {len(FILES)} entry files present; entry.png = {size} bytes")
-    return 0
+def output_dir() -> Path:
+    """The grader's /output, or MAKEFUN_OUTPUT_DIR when set."""
+    return Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
 
 
-def serve():
-    os.chdir(ROOT)
-    with socketserver.TCPServer(("127.0.0.1", 8132),
-                                http.server.SimpleHTTPRequestHandler) as httpd:
-        print("Serving at http://127.0.0.1:8132/frontpage.html")
-        httpd.serve_forever()
+def main() -> None:
+    target_dir = output_dir()
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / "entry.png"
+    shutil.copyfile(SOURCE, target)
+    print(f"wrote {target} ({target.stat().st_size} bytes)")
 
 
 if __name__ == "__main__":
-    import os
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--serve", action="store_true")
-    args = ap.parse_args()
-    raise SystemExit(serve() if args.serve else check())
+    main()
